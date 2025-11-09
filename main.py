@@ -28,11 +28,28 @@ app.add_middleware(
 )
 
 # Initialize Anthropic client
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+try:
+    anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if anthropic_api_key:
+        client = anthropic.Anthropic(api_key=anthropic_api_key)
+    else:
+        client = None
+except Exception as e:
+    print(f"Error initializing Anthropic client: {e}")
+    client = None
 
 
 async def extract_from_solicitor_letter(file_content: bytes, filename: str) -> dict:
     """Extract solicitor ref, name, address, DOB from solicitor letter"""
+    
+    if not client:
+        print("Anthropic client not initialized")
+        return {
+            "solicitor_ref": "",
+            "name": "",
+            "address": "",
+            "dob": ""
+        }
     
     is_pdf = filename.lower().endswith('.pdf')
     base64_content = base64.standard_b64encode(file_content).decode('utf-8')
@@ -118,6 +135,10 @@ If field not found, use empty string "". DO NOT ADD ANY TEXT OUTSIDE THE JSON.""
 
 async def extract_from_audiogram(file_content: bytes, filename: str) -> dict:
     """Extract audiogram date"""
+    
+    if not client:
+        print("Anthropic client not initialized")
+        return {"audiogram_date": ""}
     
     file_ext = filename.lower().split('.')[-1]
     
@@ -223,7 +244,8 @@ async def root():
         "status": "online",
         "service": "MNIHL Document Extraction API",
         "version": "1.0.0",
-        "api_key_configured": bool(os.environ.get("ANTHROPIC_API_KEY"))
+        "api_key_configured": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        "client_initialized": client is not None
     }
 
 
@@ -247,6 +269,12 @@ async def extract_data(
         raise HTTPException(
             status_code=500,
             detail="ANTHROPIC_API_KEY not configured"
+        )
+    
+    if not client:
+        raise HTTPException(
+            status_code=500,
+            detail="Anthropic client failed to initialize"
         )
     
     try:
@@ -288,13 +316,4 @@ async def extract_data(
         raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
 
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    print(f"Starting server on port {port}")
-    uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=port,
-        log_level="info"
-    )
+# No main block needed - Procfile handles startup
