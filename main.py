@@ -78,7 +78,7 @@ async def extract_from_solicitor_letter(file_content: bytes, filename: str) -> d
             }
     
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-3-5-sonnet-latest",
         max_tokens=1000,
         messages=[
             {
@@ -157,7 +157,7 @@ async def extract_from_audiogram(file_content: bytes, filename: str) -> dict:
     base64_content = base64.standard_b64encode(file_content).decode('utf-8')
     
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-3-5-sonnet-latest",
         max_tokens=500,
         messages=[
             {
